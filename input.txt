@@ -1,0 +1,8 @@
+PROG START 2000
+~     LDA   NUM1
+~     ADD   NUM2
+~     STA   RES
+NUM1  WORD  5
+NUM2  WORD  7
+RES   RESW  1
+~     END
