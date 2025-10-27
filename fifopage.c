@@ -1,95 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_FRAMES 3 // Maximum number of frames
-#define MAX_PAGES 20 // Maximum number of pages
+#define MAX_PAGES 30
 
-int frames[MAX_FRAMES]; // Array to store the frames
-int rear = -1;          // Pointer to the rear of the frame queue
-
-// Function to initialize frames array
-void initialize()
+void displayFrames(int frames[], int frameCount)
 {
-  for (int i = 0; i < MAX_FRAMES; i++)
-  {
-    frames[i] = -1; // Initializing frames with -1 (empty)
-  }
+    for (int i = 0; i < frameCount; i++)
+    {
+        if (frames[i] == -1)
+            printf("- ");
+        else
+            printf("%d ", frames[i]);
+    }
+    printf("\n");
 }
 
-// Function to display the frames
-void displayFrames()
+void FIFO(int pages[], int n, int frameCount)
 {
-  for (int i = 0; i < MAX_FRAMES; i++)
-  {
-    if (frames[i] != -1)
-      printf("%d ", frames[i]);
-    else
-      printf("- ");
-  }
-  printf("\n");
-}
+    int frames[frameCount];
+    int page_faults = 0, page_hits = 0;
+    int index = 0; // acts as the FIFO pointer
 
-// Function to implement FIFO page replacement algorithm
-void FIFO(int pages[], int n)
-{
-  int page_faults = 0;
-  int front = 0; // Pointer to the front of the frame queue
+    // Initialize all frames to -1
+    for (int i = 0; i < frameCount; i++)
+        frames[i] = -1;
 
-  for (int i = 0; i < n; i++)
-  {
-    int page = pages[i];
-    int found = 0;
+    printf("\n--- FIFO Page Replacement ---\n");
 
-    // Check if page already exists in frames
-    for (int j = 0; j < MAX_FRAMES; j++)
+    for (int i = 0; i < n; i++)
     {
-      if (frames[j] == page)
-      {
-        found = 1;
-        printf("page %d already there\n", page);
-        break;
-      }
+        int page = pages[i];
+        int found = 0;
+
+        // Check if page is already present
+        for (int j = 0; j < frameCount; j++)
+        {
+            if (frames[j] == page)
+            {
+                found = 1;
+                page_hits++;
+                printf("Page %d → HIT → ", page);
+                displayFrames(frames, frameCount);
+                break;
+            }
+        }
+
+        // If not found, replace oldest page
+        if (!found)
+        {
+            frames[index] = page;
+            index = (index + 1) % frameCount;
+            page_faults++;
+
+            printf("Page %d → FAULT → ", page);
+            displayFrames(frames, frameCount);
+        }
     }
 
-    if (!found)
-    {
-      page_faults++;
+    float hit_ratio = (float)page_hits / n;
+    float miss_ratio = (float)page_faults / n;
 
-      if (rear < MAX_FRAMES - 1)
-      {
-        rear++;
-      }
-      else
-      {
-        rear = 0;
-      }
-      frames[rear] = page;
-      printf("page %d loaded in frame %d \n", page, rear);
-    }
-
-    // printf("Page %d : ", page);
-    displayFrames();
-  }
-
-  printf("Total Page Faults: %d\n", page_faults);
+    printf("\nTotal Page Faults = %d\n", page_faults);
+    printf("Total Page Hits = %d\n", page_hits);
+    printf("Hit Ratio = %.2f\n", hit_ratio);
+    printf("Miss Ratio = %.2f\n", miss_ratio);
 }
 
 int main()
 {
-  int pages[MAX_PAGES]; // Array to store pages
+    int n, frameCount;
+    int pages[MAX_PAGES];
 
-  // Example sequence of page references
-  int n;
-  printf("Enter number of pages: ");
-  scanf("%d", &n);
-  printf("Enter the page reference sequence: ");
-  for (int i = 0; i < n; i++)
-  {
-    scanf("%d", &pages[i]);
-  }
+    printf("Enter number of pages: ");
+    scanf("%d", &n);
 
-  initialize();   // Initialize frames array
-  FIFO(pages, n); // Apply FIFO algorithm
+    printf("Enter the page reference sequence: ");
+    for (int i = 0; i < n; i++)
+        scanf("%d", &pages[i]);
 
-  return 0;
+    printf("Enter number of frames: ");
+    scanf("%d", &frameCount);
+
+    FIFO(pages, n, frameCount);
+
+    return 0;
 }
