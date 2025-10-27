@@ -1,86 +1,169 @@
+/*
+ * C Program for FCFS (First-Come, First-Serve) Scheduling
+ *
+ * This program calculates CT, TAT, and WT for a set of processes
+ * and displays the Gantt Chart.
+ */
+
 #include <stdio.h>
-#include <stdlib.h>
 
-struct Process
-{
-  int name;
-  int at;
-  int bt;
-  int ct;
-  int tat;
-  int wt;
-} processes[100];
+// Define a structure for a process
+struct process {
+    int pid; // Process ID
+    int at;  // Arrival Time
+    int bt;  // Burst Time
+    int ct;  // Completion Time
+    int tat; // Turn-Around Time
+    int wt;  // Waiting Time
+};
 
-void sortProcesses(struct Process processes[], int n)
-{
-  for (int i = 0; i < n - 1; i++)
-  {
-    for (int j = 0; j < n - i - 1; j++)
-    {
-      if (processes[j].at > processes[j + 1].at)
-      {
-        struct Process temp = processes[j];
-        processes[j] = processes[j + 1];
-        processes[j + 1] = temp;
-      }
-    }
-  }
+// Structure to store Gantt chart blocks
+struct GanttBlock {
+    int pid;
+    int startTime;
+    int endTime;
+};
+
+// Function to swap two processes (used in sorting)
+void swap(struct process *xp, struct process *yp) {
+    struct process temp = *xp;
+    *xp = *yp;
+    *yp = temp;
 }
 
-int main()
-{
-  int n;
-  printf("Enter number of processes: ");
-  scanf("%d", &n);
+// Function to sort processes based on Arrival Time (Bubble Sort)
+void sortProcesses(struct process proc[], int n) {
+    int i, j;
+    for (i = 0; i < n - 1; i++) {
+        for (j = 0; j < n - i - 1; j++) {
+            if (proc[j].at > proc[j + 1].at) {
+                swap(&proc[j], &proc[j + 1]);
+            }
+        }
+    }
+}
 
-  for (int i = 0; i < n; i++)
-  {
-    processes[i].name = i + 1;
-    printf("Enter arrival and burst time for P%d: ", i + 1);
-    scanf("%d%d", &processes[i].at, &processes[i].bt);
-  }
+// Function to print the Gantt Chart
+void printGanttChart(struct GanttBlock gantt[], int n) {
+    int i;
+    printf("\n\n--- Gantt Chart ---\n\n");
 
-  int curtt = 0;
-  sortProcesses(processes, n);
+    // Print top border
+    for (i = 0; i < n; i++) {
+        printf("---------");
+    }
+    printf("-\n");
 
-  for (int i = 0; i < n; i++)
-  {
-    if (curtt < processes[i].at)
-      curtt = processes[i].at;
+    // Print Process IDs
+    for (i = 0; i < n; i++) {
+        if (gantt[i].pid == 0) {
+            printf("|  IDLE  ");
+        } else {
+            printf("|   P%d   ", gantt[i].pid);
+        }
+    }
+    printf("|\n");
 
-    curtt += processes[i].bt;
-    processes[i].ct = curtt;
-    processes[i].tat = processes[i].ct - processes[i].at;
-    processes[i].wt = processes[i].tat - processes[i].bt;
-  }
+    // Print bottom border
+    for (i = 0; i < n; i++) {
+        printf("---------");
+    }
+    printf("-\n");
 
-  printf("\nGantt Chart:\n");
-  for (int i = 0; i < n; i++)
-  {
-    printf("|\tP%d\t", processes[i].name);
-  }
-  printf("|\n");
+    // Print times
+    printf("%-9d", gantt[0].startTime);
+    for (i = 0; i < n; i++) {
+        printf("%-9d", gantt[i].endTime);
+    }
+    printf("\n");
+}
 
-  printf("%d\t", processes[0].at < 0 ? 0 : processes[0].at);
-  for (int i = 0; i < n; i++)
-  {
-    printf("\t%d\t", processes[i].ct);
-  }
-  printf("\n");
+// Function to find Completion Time, TAT, and WT
+void findTimes(struct process proc[], int n) {
+    int i;
+    int current_time = 0;
+    float total_wt = 0;
+    float total_tat = 0;
+    
+    struct GanttBlock gantt[50]; // Array for Gantt chart
+    int ganttIndex = 0;
 
-  float avgtat = 0.0;
-  float avgwt = 0.0;
+    // Sort processes by arrival time
+    sortProcesses(proc, n);
 
-  printf("\nProcess  ArrivalTime BurstTime TurnaroundTime    WaitingTime   CompletionTime\n");
-  for (int i = 0; i < n; i++)
-  {
-    printf("P%d%10d%10d%15d%20d%20d\n", processes[i].name, processes[i].at, processes[i].bt, processes[i].tat, processes[i].wt, processes[i].ct);
-    avgwt = avgwt + processes[i].wt;
-    avgtat = avgtat + processes[i].tat;
-  }
+    printf("\n--- FCFS Execution Order ---\n");
+    for (i = 0; i < n; i++) {
+        // If the current process arrives after the previous one finished,
+        // the CPU is idle.
+        if (current_time < proc[i].at) {
+            printf("... CPU Idle from %d to %d ...\n", current_time, proc[i].at);
+            gantt[ganttIndex].pid = 0; // 0 for IDLE
+            gantt[ganttIndex].startTime = current_time;
+            gantt[ganttIndex].endTime = proc[i].at;
+            ganttIndex++;
+            
+            current_time = proc[i].at;
+        }
+        
+        printf("Process P%d starts at time %d\n", proc[i].pid, current_time);
 
-  printf("\nAverage Waiting Time = %f\n", avgwt / n);
-  printf("Average Turnaround Time = %f\n", avgtat / n);
+        // Add process to Gantt chart
+        gantt[ganttIndex].pid = proc[i].pid;
+        gantt[ganttIndex].startTime = current_time;
 
-  return 0;
+        // Calculate Completion Time
+        proc[i].ct = current_time + proc[i].bt;
+        
+        // Update current time
+        current_time = proc[i].ct;
+
+        // Finish Gantt block
+        gantt[ganttIndex].endTime = current_time;
+        ganttIndex++;
+
+        // Calculate Turn-Around Time
+        proc[i].tat = proc[i].ct - proc[i].at;
+
+        // Calculate Waiting Time
+        proc[i].wt = proc[i].tat - proc[i].bt;
+
+        // Add to totals
+        total_wt += proc[i].wt;
+        total_tat += proc[i].tat;
+    }
+
+    // Print the results table
+    printf("\n--- FCFS Scheduling Results ---\n");
+    printf("PID\tAT\tBT\tCT\tTAT\tWT\n");
+    for (i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\t%d\n",
+               proc[i].pid, proc[i].at, proc[i].bt,
+               proc[i].ct, proc[i].tat, proc[i].wt);
+    }
+
+    // Print averages
+    printf("\nAverage Waiting Time: %.2f\n", total_wt / n);
+    printf("Average Turn-Around Time: %.2f\n", total_tat / n);
+    
+    // Print Gantt Chart
+    printGanttChart(gantt, ganttIndex);
+}
+
+int main() {
+    int n, i;
+    struct process proc[20]; // Array of processes
+
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
+
+    printf("Enter Arrival Time and Burst Time for each process:\n");
+    for (i = 0; i < n; i++) {
+        printf("P%d: ", i + 1);
+        proc[i].pid = i + 1; // Set PID
+        scanf("%d %d", &proc[i].at, &proc[i].bt);
+    }
+
+    findTimes(proc, n);
+
+    return 0;
 }
