@@ -1,0 +1,73 @@
+; This is the interactive palindrome check program from the images.
+; It prompts the user to enter a string and then checks it.
+
+data SEGMENT
+    MSG1 DB 10, 13, 'Enter the string:$'
+    MSG2 DB 10, 13, 'String is Palindrome$'
+    MSG3 DB 10, 13, 'String is not Palindrome$'
+    STR1 DB 50 DUP(0) ; 50-byte buffer for the string
+data ENDS
+
+code SEGMENT
+    ASSUME CS:code, DS:data
+
+START:
+    MOV AX, data
+    MOV DS, AX
+    
+    ; --- Prompt user to enter the string ---
+    LEA DX, MSG1
+    MOV AH, 09H
+    INT 21H
+    
+    ; --- Read the string from the keyboard ---
+    LEA SI, STR1  ; Point SI to the start of the buffer
+    LEA DI, STR1  ; Point DI to the start (will be incremented)
+    MOV AH, 01H   ; DOS function: Read character
+
+NEXT:
+    INT 21H       ; Read a char into AL
+    CMP AL, 0DH   ; Is it 'Enter' (Carriage Return)?
+    JE TERMINATE  ; Yes, go to TERMINATE
+    
+    MOV [DI], AL  ; No, store the character in the buffer
+    INC DI        ; Move to the next spot
+    JMP NEXT      ; Loop back to get another char
+    
+TERMINATE:
+    MOV AL, '$'   ; Store the '$' marker at the end
+    MOV [DI], AL
+    DEC DI        ; Move DI to point to the *last real character*
+    
+    ; SI is still at the beginning of the string
+    
+CHECK_LOOP:
+    MOV AL, [SI]  ; Get the "front" character
+    CMP AL, [DI]  ; Compare with the "back" character
+    JNE NOTPALINDROME ; If not equal, jump
+
+    INC SI        ; Move front pointer forward
+    DEC DI        ; Move back pointer backward
+    
+    CMP SI, DI    ; Have the pointers crossed?
+    JLE CHECK_LOOP; If (SI <= DI), keep looping
+    
+    ; --- If we get here, it's a palindrome ---
+PALINDROME:
+    MOV AH, 09H
+    LEA DX, MSG2
+    INT 21H
+    JMP EXIT
+
+NOTPALINDROME:
+    MOV AH, 09H
+    LEA DX, MSG3
+    INT 21H
+
+EXIT:
+    MOV AH, 4CH   ; DOS function: Terminate program
+    INT 21H
+    
+code ENDS
+END START
+
